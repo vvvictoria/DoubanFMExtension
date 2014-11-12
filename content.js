@@ -1,0 +1,111 @@
+var link = null;
+var name = null;
+var isRepeatMode= false;
+$(document).ready(go);
+
+function go() {
+    addDownloadLink();
+    addLyricsLink();
+    addRepeatModeLink();
+    setInterval(requireInforFromBackgroundPage, 1000);
+}
+
+
+function addLyrics(){
+    if($("#lyrics").length==0){
+       $("body").append($("<div id='lyrics' class ='lyrics'></div>"));
+    }
+
+    $("#lyrics").text(curlLyrics(document.title.split(' -')[0],getArtist(name)));
+    $("#lyrics").draggable();
+}
+
+function getArtist(name){
+  return "";
+}
+
+function curlLyrics(song,artist){
+     var results;
+  if(artist !=""){
+     results = curl("http://geci.me/api/lyric/"+song+"/"+artist,"json");
+  }
+  else{
+     results = curl("http://geci.me/api/lyric/"+song,"json");
+     console.log(results);
+  }
+  return curl(results.result[0].lrc, "html");
+}
+
+
+function curl(url,type){
+    var response;
+    $.ajax({
+      url: url,
+      async: false,
+      dataType:type
+    }).done(function(data){
+         response = data;
+      });
+    return response;
+}
+
+function requireInforFromBackgroundPage() {
+    chrome.extension.sendMessage({from:"douban.fm"}, function (response) {
+      link = response.link;
+      name = response.name.split(' -')[0];
+    });
+}
+
+
+function addDownloadLink(){
+    var download = $("<div id='download'><span>Download</span></div>");
+    $('#fm-section2').append(download);
+    $("#download span").bind("click", downLoadCurrent);
+}
+
+
+function addLyricsLink(){
+    var download = $("<div id='lyricsLink'><span>lyrics</span></div>");
+    $('#fm-section2').append(download);
+    $("#lyricsLink span").bind("click",addLyrics);
+}
+
+
+
+
+function addRepeatModeLink(){
+   var repeat = $("<div id='repeat'>Repeat</div>");
+    $('#fm-section2').append(repeat);
+    $("#repeat").bind("click", setRepeatMode);
+}
+
+
+function setRepeatMode(){
+    isRepeatMode = !isRepeatMode;
+    if(isRepeatMode){
+      $("#repeat").text("Random");
+    }
+    else{
+       $("#repeat").text("Repeat");
+    }
+    chrome.extension.sendMessage({from:"repeat"},function(response){
+      console.log(isRepeatMode?"Yes":"No");
+    });
+}
+
+function downLoadCurrent()
+{
+    var iframe;
+    iframe = document.getElementById("hiddenDownloader");
+    if (iframe === null)
+    {
+        iframe = document.createElement('iframe');
+        iframe.id = "hiddenDownloader";
+        iframe.style.visibility = 'hidden';
+        document.body.appendChild(iframe);
+    }
+    iframe.src = link;
+}
+
+
+
